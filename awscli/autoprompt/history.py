@@ -21,7 +21,7 @@ from awscli.autocomplete.completer import CompletionResult
 from awscli.autocomplete.filters import fuzzy_filter
 
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger('awscli.autoprompt')
 
 
 class HistoryDriver(FileHistory):
@@ -55,6 +55,7 @@ class HistoryDriver(FileHistory):
                 json.dump(history, f)
         except Exception:
             LOG.debug('Exception on loading prompt history:', exc_info=True)
+
 
 
 class HistoryCompleter(Completer):

@@ -310,7 +310,6 @@ class DebugPanelWidget:
         # add keybinding to save file on press Enter in textfield
         dialog.container.body.container.content.key_bindings.add(
             Keys.Enter, filter=has_focus(textfield))(ok_handler)
-
         return dialog
 
     def __pt_container__(self):
