@@ -1,0 +1,35 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python application
+
+on:
+  push:
+    branches: [ v2 ]
+  pull_request:
+    branches: [ v2 ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install codecov
+        python scripts/ci/install
+        python scripts/ci/install-check
+    - name: Run test
+      run: |
+        python scripts/ci/run-tests
+        python scripts/ci/run-check
+    - name: Move coverage
+      run: |
+        rm tests/coverage.xml && mv tests/.coverage ./ && codecov
