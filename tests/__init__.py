@@ -377,6 +377,11 @@ class PromptToolkitApplicationStubber:
     def add_app_assertion(self, assertion):
         self._queue.append(AppAssertionAction(assertion))
 
+    def start_completion_for_current_buffer(self):
+        def start_completion(app):
+            app.current_buffer.start_completion()
+        self._queue.append(AppCallbackAction(callback=start_completion))
+
     def add_text_to_current_buffer(self, text):
         def set_current_buffer(app):
             app.current_buffer.text = text

@@ -15,6 +15,7 @@ from awscli.testutils import unittest, mock
 
 from botocore.session import Session
 from prompt_toolkit.application import Application
+from prompt_toolkit.completion import PathCompleter, Completion
 from prompt_toolkit.eventloop import Future
 from prompt_toolkit.input.defaults import create_pipe_input
 from prompt_toolkit.keys import Keys
@@ -85,6 +86,20 @@ class BaseWizardApplicationTest(unittest.TestCase):
             lambda app: self.assertEqual(
                 app.layout.get_buffer_by_name(buffer_name).document.text,
                 text)
+        )
+
+    def add_current_buffer_assertion(self, buffer_name):
+        self.stubbed_app.add_app_assertion(
+            lambda app: self.assertEqual(
+                app.layout.current_buffer.name, buffer_name)
+        )
+
+    def add_buffer_completions_assertion(self, buffer_name, completions):
+        self.stubbed_app.add_app_assertion(
+            lambda app: self.assertEqual(
+                app.layout.get_buffer_by_name(
+                    buffer_name).complete_state.completions,
+                completions)
         )
 
     def add_prompt_is_visible_assertion(self, name):
@@ -1403,3 +1418,76 @@ class TestWizardValues(unittest.TestCase):
         values = self.get_wizard_values({'use_handler': self.handler})
         value = values['handler_value']
         self.exception_handler.assert_called_with(e)
+
+
+class FakePathCompleter(PathCompleter):
+    def get_completions(self, *args, **kwargs):
+        yield from [
+            Completion('file1', 0, display='file1'),
+            Completion('file2', 0, display='file2'),
+        ]
+
+
+class TestPropmtCompletionWizardApplication(BaseWizardApplicationTest):
+    def setUp(self):
+        self.patch = mock.patch(
+            'awscli.customizations.wizard.ui.prompt.PathCompleter',
+            FakePathCompleter)
+        self.patch.start()
+        super().setUp()
+
+    def tearDown(self):
+        super().tearDown()
+        self.patch.stop()
+
+    def get_definition(self):
+        return {
+            'title': 'Uses API call in prompting stage',
+            'plan': {
+                'section': {
+                    'shortname': 'Section',
+                    'values': {
+                        'choose_file': {
+                            'description': 'Choose file',
+                            'type': 'prompt',
+                            'completer': 'file_completer'
+                        },
+                        'second_prompt': {
+                            'description': 'Second prompt',
+                            'type': 'prompt',
+                        }
+                    }
+                },
+                '__DONE__': {},
+            },
+            'execute': {}
+        }
+
+    def test_show_completions_for_buffer_text(self):
+        self.stubbed_app.add_text_to_current_buffer('fi')
+        self.stubbed_app.start_complete_on_current_buffer()
+        self.add_buffer_completions_assertion('choose_file',
+            [
+                Completion('file1', 0, display='file1'),
+                Completion('file2', 0, display='file2'),
+            ]
+        )
+        self.stubbed_app.run()
+
+    def test_choose_completion_on_Enter_and_stays_on_the_same_prompt(self):
+        self.stubbed_app.add_text_to_current_buffer('fi')
+        self.stubbed_app.start_completion_for_current_buffer()
+        self.stubbed_app.add_keypress(Keys.Down)
+        self.stubbed_app.add_keypress(Keys.Enter)
+        self.add_buffer_text_assertion('choose_file', 'file1')
+        self.add_current_buffer_assertion('choose_file')
+        self.stubbed_app.run()
+
+    def test_choose_completion_on_Enter_and_move_on_second_Enter(self):
+        self.stubbed_app.add_text_to_current_buffer('fi')
+        self.stubbed_app.start_completion_for_current_buffer()
+        self.stubbed_app.add_keypress(Keys.Down)
+        self.stubbed_app.add_keypress(Keys.Enter)
+        self.stubbed_app.add_keypress(Keys.Enter)
+        self.add_current_buffer_assertion('second_prompt')
+        self.stubbed_app.run()
