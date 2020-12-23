@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 import json
-import io
 import os
 
 from prompt_toolkit import Application
@@ -28,6 +27,7 @@ from awscli.autoprompt.prompttoolkit import (
 from awscli.autoprompt.history import HistoryDriver
 from awscli.testutils import unittest, random_chars, FileCreator, cd
 from tests import PromptToolkitApplicationStubber as ApplicationStubber
+from tests import FakeApplicationOutput
 
 
 def _ec2_only_command_table(command_table, **kwargs):
@@ -78,7 +78,13 @@ class BasicPromptToolkitTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.test_file_creator.remove_all()
+        try:
+            cls.test_file_creator.remove_all()
+        except PermissionError:
+            # On Windows run on GitHub Actions Container we fail at
+            # this point because probably we still have open
+            # connections to the database
+            pass
 
     def setUp(self):
         self.completer = PromptToolkitCompleter(self.completion_source)
@@ -92,7 +98,8 @@ class BasicPromptToolkitTest(unittest.TestCase):
             completion_source=self.completion_source,
             driver=self.driver,
             factory=self.factory,
-            cli_parser=self.cli_parser
+            cli_parser=self.cli_parser,
+            output=FakeApplicationOutput()
         )
         self.prompter.args = []
         self.prompter.input_buffer = self.factory.create_input_buffer()
