@@ -17,6 +17,7 @@ import logging
 import errno
 from botocore.compat import OrderedDict
 
+from awscli.compat import compat_open
 from awscli.customizations.eks.exceptions import EKSError
 from awscli.customizations.eks.ordered_yaml import (ordered_yaml_load,
                                                     ordered_yaml_dump)
@@ -151,7 +152,7 @@ class KubeconfigLoader(object):
         :rtype: Kubeconfig
         """
         try:
-            with open(path, "r") as stream:
+            with compat_open(path, "r") as stream:
                 loaded_content = ordered_yaml_load(stream)
         except IOError as e:
             if e.errno == errno.ENOENT:
@@ -190,12 +191,8 @@ class KubeconfigWriter(object):
                 raise KubeconfigInaccessableError(
                         "Can't create directory for writing: {0}".format(e))
         try:
-            with os.fdopen(
-                    os.open(
-                        config.path,
-                        os.O_CREAT | os.O_RDWR | os.O_TRUNC,
-                        0o600),
-                    "w+") as stream:
+            with compat_open(config.path, "w+",
+                             access_permissions=0o600) as stream:
                 ordered_yaml_dump(config.content, stream)
         except (IOError, OSError) as e:
             raise KubeconfigInaccessableError(

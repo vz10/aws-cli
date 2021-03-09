@@ -19,6 +19,7 @@ import platform
 import zipfile
 import signal
 import contextlib
+from functools import partial
 
 from botocore.compat import six
 #import botocore.compat
@@ -121,7 +122,8 @@ if six.PY3:
     def _get_text_writer(stream, errors):
         return stream
 
-    def compat_open(filename, mode='r', encoding=None):
+    def compat_open(filename, mode='r', encoding=None,
+                    access_permissions=None):
         """Back-port open() that accepts an encoding argument.
 
         In python3 this uses the built in open() and in python2 this
@@ -132,9 +134,13 @@ if six.PY3:
         encoding.
 
         """
+        opener = os.open
+        if access_permissions is not None:
+            opener = partial(os.open, mode=access_permissions)
         if 'b' not in mode:
             encoding = locale.getpreferredencoding()
-        return open(filename, mode, encoding=encoding)
+        return open(filename, mode, encoding=encoding, opener=opener)
+
 
     def bytes_print(statement, stdout=None):
         """
@@ -194,8 +200,11 @@ else:
 
         return codecs.getwriter(encoding)(stream, errors)
 
-    def compat_open(filename, mode='r', encoding=None):
+    def compat_open(filename, mode='r', encoding=None,
+                    access_permissions=None):
         # See docstring for compat_open in the PY3 section above.
+        if access_permissions is not None:
+            filename = os.open(filename, mode=access_permissions)
         if 'b' not in mode:
             encoding = locale.getpreferredencoding()
         return io.open(filename, mode, encoding=encoding)
