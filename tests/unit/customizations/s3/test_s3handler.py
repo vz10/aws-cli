@@ -44,8 +44,8 @@ from awscli.customizations.s3.utils import StdoutBytesWriter
 from awscli.customizations.s3.utils import WarningResult
 from awscli.customizations.s3.subscribers import (
     ProvideSizeSubscriber, SetMetadataDirectivePropsSubscriber,
-    SetTagsSubscriber, ProvideUploadContentTypeSubscriber,
-    ProvideLastModifiedTimeSubscriber,
+    SetTagsSubscriber, SetMultipartTagsSubscriber,
+    ProvideUploadContentTypeSubscriber, ProvideLastModifiedTimeSubscriber,
     DirectoryCreatorSubscriber, DeleteSourceFileSubscriber,
     DeleteSourceObjectSubscriber,
 
@@ -639,7 +639,7 @@ class TestCopyRequestSubmitter(BaseTransferRequestSubmitterTest):
             ProvideSizeSubscriber,
             QueuedResultSubscriber,
             SetMetadataDirectivePropsSubscriber,
-            SetTagsSubscriber,
+            SetMultipartTagsSubscriber,
             ProgressResultSubscriber,
             DoneResultSubscriber,
         ]
@@ -675,7 +675,7 @@ class TestCopyRequestSubmitter(BaseTransferRequestSubmitterTest):
             ProvideSizeSubscriber,
             QueuedResultSubscriber,
             SetMetadataDirectivePropsSubscriber,
-            SetTagsSubscriber,
+            SetMultipartTagsSubscriber,
             ProgressResultSubscriber,
             DoneResultSubscriber,
         ]
@@ -816,8 +816,50 @@ class TestCopyRequestSubmitter(BaseTransferRequestSubmitterTest):
             ProvideSizeSubscriber,
             QueuedResultSubscriber,
             SetMetadataDirectivePropsSubscriber,
-            SetTagsSubscriber,
+            SetMultipartTagsSubscriber,
             DeleteSourceObjectSubscriber,
+            ProgressResultSubscriber,
+            DoneResultSubscriber,
+        ]
+        copy_call_kwargs = self.transfer_manager.copy.call_args[1]
+        actual_subscribers = copy_call_kwargs['subscribers']
+        self.assertEqual(len(ref_subscribers), len(actual_subscribers))
+        for i, actual_subscriber in enumerate(actual_subscribers):
+            self.assertIsInstance(actual_subscriber, ref_subscribers[i])
+
+    def test_tagging_option_adds_set_tag_subscriber(self):
+        fileinfo = FileInfo(
+            dest=self.source_bucket + '/' + self.source_key,
+            src=self.bucket + '/' + self.key)
+        self.cli_params['guess_mime_type'] = True  # Default settings
+        self.cli_params['tagging'] = {'Key': 'Value'}
+        self.transfer_request_submitter.submit(fileinfo)
+        ref_subscribers = [
+            ProvideSizeSubscriber,
+            QueuedResultSubscriber,
+            SetMetadataDirectivePropsSubscriber,
+            SetTagsSubscriber,
+            ProgressResultSubscriber,
+            DoneResultSubscriber,
+        ]
+        copy_call_kwargs = self.transfer_manager.copy.call_args[1]
+        actual_subscribers = copy_call_kwargs['subscribers']
+        self.assertEqual(len(ref_subscribers), len(actual_subscribers))
+        for i, actual_subscriber in enumerate(actual_subscribers):
+            self.assertIsInstance(actual_subscriber, ref_subscribers[i])
+
+    def test_empty_tagging_option_adds_set_tag_subscriber(self):
+        fileinfo = FileInfo(
+            dest=self.source_bucket + '/' + self.source_key,
+            src=self.bucket + '/' + self.key)
+        self.cli_params['guess_mime_type'] = True  # Default settings
+        self.cli_params['tagging'] = {}
+        self.transfer_request_submitter.submit(fileinfo)
+        ref_subscribers = [
+            ProvideSizeSubscriber,
+            QueuedResultSubscriber,
+            SetMetadataDirectivePropsSubscriber,
+            SetTagsSubscriber,
             ProgressResultSubscriber,
             DoneResultSubscriber,
         ]
