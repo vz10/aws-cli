@@ -212,7 +212,7 @@ class TestOutputStreamFactory(unittest.TestCase):
     def test_pager(self):
         self.set_session_pager('mypager --option')
         with self.stream_factory.get_pager_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assert_popen_call(
                 expected_pager_cmd='mypager --option'
             )
@@ -220,7 +220,7 @@ class TestOutputStreamFactory(unittest.TestCase):
     def test_explicit_pager(self):
         self.set_session_pager('sessionpager --option')
         with self.stream_factory.get_pager_stream('mypager --option') as stream:
-            stream.write('')
+            stream.write()
             self.assert_popen_call(
                 expected_pager_cmd='mypager --option'
             )
@@ -228,7 +228,7 @@ class TestOutputStreamFactory(unittest.TestCase):
     def test_exit_of_context_manager_for_pager(self):
         self.set_session_pager('mypager --option')
         with self.stream_factory.get_pager_stream() as stream:
-            stream.write('')
+            stream.write()
         returned_process = self.popen.return_value
         self.assertTrue(returned_process.communicate.called)
 
@@ -236,26 +236,26 @@ class TestOutputStreamFactory(unittest.TestCase):
         self.popen.side_effect = PopenException
         with self.assertRaises(PopenException):
             with self.stream_factory.get_pager_stream() as stream:
-                stream.write('')
+                stream.write()
 
     @mock.patch('awscli.utils.get_stdout_text_writer')
     def test_stdout(self, mock_stdout_writer):
         with self.stream_factory.get_stdout_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assertTrue(mock_stdout_writer.called)
 
     def test_can_silence_io_error_from_pager(self):
         self.popen.return_value = MockProcess()
         try:
             with self.stream_factory.get_pager_stream() as stream:
-                stream.write('')
+                stream.write()
         except IOError:
             self.fail('Should not raise IOError')
 
     def test_get_output_stream(self):
         self.set_session_pager('mypager --option')
         with self.stream_factory.get_output_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assert_popen_call(
                 expected_pager_cmd='mypager --option'
             )
@@ -264,20 +264,20 @@ class TestOutputStreamFactory(unittest.TestCase):
     def test_use_stdout_if_not_tty(self, mock_stdout_writer):
         self.mock_is_a_tty.return_value = False
         with self.stream_factory.get_output_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assertTrue(mock_stdout_writer.called)
 
     @mock.patch('awscli.utils.get_stdout_text_writer')
     def test_use_stdout_if_pager_set_to_empty_string(self, mock_stdout_writer):
         self.set_session_pager('')
         with self.stream_factory.get_output_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assertTrue(mock_stdout_writer.called)
 
     def test_adds_default_less_env_vars(self):
         self.set_session_pager('myless')
         with self.stream_factory.get_output_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assert_popen_call(
                 expected_pager_cmd='myless',
                 env={'LESS': 'FRX'}
@@ -287,7 +287,7 @@ class TestOutputStreamFactory(unittest.TestCase):
         self.set_session_pager('less')
         self.environ['LESS'] = 'S'
         with self.stream_factory.get_output_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assert_popen_call(
                 expected_pager_cmd='less',
                 env={'LESS': 'S'}
@@ -298,7 +298,7 @@ class TestOutputStreamFactory(unittest.TestCase):
         stream_factory = OutputStreamFactory(
             self.session, self.popen, self.environ, default_less_flags='ABC')
         with stream_factory.get_output_stream() as stream:
-            stream.write('')
+            stream.write()
             self.assert_popen_call(
                 expected_pager_cmd='less',
                 env={'LESS': 'ABC'}
@@ -315,7 +315,7 @@ class TestOutputStreamFactory(unittest.TestCase):
             self.session, self.popen, self.environ, default_less_flags='ABC')
         with stream_factory.get_output_stream() as stream:
             self.assertEqual(self.popen.call_count, 0)
-            stream.write('')
+            stream.write()
             self.assert_popen_call(
                 expected_pager_cmd='less',
                 env={'LESS': 'ABC'}
@@ -549,15 +549,15 @@ class TestLazyPager(unittest.TestCase):
         process.communicate.assert_called_with(timeout=20)
 
     def test_lazy_pager_popen_calls_on_stdin_call(self):
-        self.pager.stdin.write('')
+        self.pager.stdin.write()
         self.assertEqual(self.popen.call_count, 1)
 
     def test_lazy_pager_popen_calls_on_process_call(self):
         self.pager.foo()
         self.assertEqual(self.popen.call_count, 1)
 
-    @if_windows
+    @mock.patch('awscli.utils.is_windows', True)
     @mock.patch('awscli.utils.AnsiToWin32')
-    def test_lazy_stream_wraps_with_ansi_to_win(self, wrapper):
-        self.pager.stdin.write('')
-        wrapper.assert_called_once()
+    def test_lazy_stream_wrapped_if_windows(self, wrapper, *args):
+        self.pager.stdin.write()
+        self.assertTrue(wrapper.call_count, 1)

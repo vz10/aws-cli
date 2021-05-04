@@ -1,0 +1,5 @@
+{
+  "type": "bugfix",
+  "category": "``pager``",
+  "description": "Strip ANSI symbols from pager output on Windows"
+}

@@ -39,7 +39,11 @@ class LazyStdin:
         if self._stream is None:
             self._stream = self._process.initialize().stdin
             if is_windows:
-                wrapper = AnsiToWin32(self._stream)
+                # without pager Colorama wraps stdout and stderr for windows
+                # to strip ANSI symbols if needed in case of pager we need to
+                # do it by ourselves
+                wrapper = AnsiToWin32(
+                    self._stream, autoreset=True, strip=False)
                 if wrapper.should_wrap():
                     self._stream = wrapper.stream
         return getattr(self._stream, item)
