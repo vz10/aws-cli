@@ -20,7 +20,8 @@ import sys
 from subprocess import Popen, PIPE
 import logging
 
-from awscli.compat import six
+from colorama.ansitowin32 import AnsiToWin32
+from awscli.compat import six, is_windows
 from awscli.compat import get_stdout_text_writer
 from awscli.compat import get_popen_kwargs_for_pager_cmd
 from botocore.utils import IMDSFetcher
@@ -37,6 +38,10 @@ class LazyStdin:
     def __getattr__(self, item):
         if self._stream is None:
             self._stream = self._process.initialize().stdin
+            if is_windows:
+                wrapper = AnsiToWin32(self._stream)
+                if wrapper.should_wrap():
+                    self._stream = wrapper.stream
         return getattr(self._stream, item)
 
     def flush(self):
